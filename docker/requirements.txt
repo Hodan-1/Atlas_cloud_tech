@@ -1,0 +1,9 @@
+ipython == 8.25.0
+requests == 2.32.3
+aiohttp == 3.9.5
+numpy==2.2.3
+matplotlib==3.10.1
+matplotlib-inline==0.1.6
+uproot==5.6.0
+awkward==2.7.4
+vector==1.6.1
