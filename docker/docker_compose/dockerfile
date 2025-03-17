@@ -1,14 +1,22 @@
+#Use officical pyhton image
 FROM python:3.12
 
 # Set the working directory
 WORKDIR /app
 
+# Install system dependencies (if needed)
+RUN apt-get update && apt-get install -y \
+    librabbitmq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the requirements file and install dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Debugging: Check if pika is installed
+RUN pip list | grep pika
+
 # Copy all necessary files
 COPY worker.py messenger.py /app/
 
-# Run both worker.py and messenger.py when the container starts
-CMD ["sh", "-c", "python /app/worker.py & python /app/messenger.py"]
+#NO CMD: specified in composer.yml

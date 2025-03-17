@@ -5,13 +5,19 @@ services:
     ports:
       - "5673:5672"  # RabbitMQ main communication port
       - "15673:15672" # RabbitMQ management UI
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
   worker:
     build: .
     container_name: worker
     depends_on:
-      - rabbitmq
+        rabbitmq:
+          condition: service_healthy
     environment:
       - RABBITMQ_HOST=rabbitmq
     command: ["python", "worker.py"]
@@ -21,8 +27,8 @@ services:
     build: .
     container_name: messenger
     depends_on:
-      - rabbitmq
-      - worker
+      rabbitmq:
+        condition: service_healthy
     command: ["python", "messenger.py"]
     restart: always
 
