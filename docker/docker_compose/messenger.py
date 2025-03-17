@@ -4,6 +4,17 @@ import matplotlib.pyplot as plt
 import json
 import time
 import logging
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+## want histograsm to print in a seperate directory and pop up
+# Output directory
+output_dir = "/app/output"
+os.makedirs(output_dir, exist_ok=True)
 
 ##Added the needed files
 file_paths = [
@@ -14,9 +25,7 @@ file_paths = [
     
 ]
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
 
 # Connect to RabbitMQ with retry logic
 def connect_to_rabbitmq():
@@ -42,20 +51,36 @@ channel.queue_declare(queue='result_queue', durable=True)
 # Send tasks to the queue
 for file in file_paths:
     channel.basic_publish(exchange='', routing_key='task_queue', body= file)
- 
+    logger.info("Sent tasks: {file_path}")
+
 logger.info(" [x] Sent tasks to workers")
 
 # Collect results from workers. combined agregator to this...
 results = []
 def collect_results(ch, method, properties, body):
-    results.extend(eval(body.decode()))
+    result = (json.loads(body.decode()))
+    results.extend(result)
+    logger.info(f"Received result: {result}")
+
     if len(results) == len(file_paths):
+
+        # Output directory
+        output_dir = "/app/output"
+        os.makedirs(output_dir, exist_ok=True)
+                
         # Generate the final histogram
         bin_edges = np.arange(80, 250 + 5, 5)
         plt.hist(results, bins=bin_edges, edgecolor='black')
         plt.xlabel('4-lepton invariant mass [GeV]')
         plt.ylabel('Events / 5 GeV')
         plt.title('Final Histogram')
+
+
+        # Save the histogram
+        output_path = os.path.join(output_dir, "output_plot.png")
+        plt.savefig(output_path)
+        logger.info(f"Histogram saved to {output_path}")
+
         plt.show()
         connection.close()
 

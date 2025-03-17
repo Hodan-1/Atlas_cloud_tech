@@ -28,16 +28,25 @@ def calc_mass(lep_pt, lep_eta, lep_phi, lep_E):
 
 def process_task(file_path):
     #Full data set
+    logger.info(f"Opening file: {file_path}")
     tree = uproot.open(file_path + ":mini")
     variables = ['lep_pt', 'lep_eta', 'lep_phi', 'lep_E', 'lep_charge', 'lep_type']
     data = tree.arrays(variables, library="ak")
+
+    #Debugging --> nothing is printing?
+    logger.info(f"First entry: {data[:1]}")
 
 # Apply cuts
     data = data[cut_lep_type(data['lep_type'])]
     data = data[cut_lep_charge(data['lep_charge'])]
     
+
     # Calculate invariant mass
     data['mass'] = calc_mass(data['lep_pt'], data['lep_eta'], data['lep_phi'], data['lep_E'])
+    
+    # Printing the first few masses for debugging
+    logger.info(f"First few masses: {data['mass'][:5]}")
+
     return data
 
 def callback(ch, method, properties, body):
@@ -49,8 +58,9 @@ def callback(ch, method, properties, body):
         processed_data = process_task(file_path)
 
         # Send result back to rabbit
-        channel.basic_publish(exchange='', routing_key='result_queue', body=str(ak.to_list(processed_data['mass'])))
-        
+        ch.basic_publish(exchange='', routing_key='result_queue', body=str(ak.to_list(processed_data['mass'])))
+        logger.info(f"Sent results for {file_path}")
+
         # Add acknowlegments
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
