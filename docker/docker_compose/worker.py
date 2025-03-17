@@ -17,7 +17,7 @@ GeV = 1.0
 # Define mass  functions
 def cut_lep_type(lep_type):
     sum_lep_type = lep_type[:, 0] + lep_type[:, 1] + lep_type[:, 2] + lep_type[:, 3]
-    return (sum_lep_type == 44) | (sum_lep_type == 48) | (sum_lep_type == 52)  
+    return (sum_lep_type != 44) & (sum_lep_type != 48) & (sum_lep_type != 52)  
 
 def cut_lep_charge(lep_charge):
     return lep_charge[:, 0] + lep_charge[:, 1] + lep_charge[:, 2] + lep_charge[:, 3] != 0
@@ -64,8 +64,7 @@ def callback(ch, method, properties, body):
         processed_data = process_task(file_path)
 
         # Send result back to rabbit
-        masses = ak.to_list(processed_data['mass'])
-        ch.basic_publish(exchange='', routing_key='result_queue', body= json.dumps(masses))
+        ch.basic_publish(exchange='', routing_key='result_queue', body=json.dumps(ak.to_list(processed_data)))
         logger.info(f"Sent results for {file_path}")
 
         # Add acknowlegments

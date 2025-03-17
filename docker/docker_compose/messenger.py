@@ -61,27 +61,37 @@ files_processed = 0
 
 def collect_results(ch, method, properties, body):
     global files_processed
-    result = (json.loads(body.decode()))
+    result = json.loads(body.decode())
     results.extend(result)
-    logger.info(f"Received result: {result}")
-    
+    logger.info(f"Received {len(result)} results")
+
     # Acknowledge the message
     ch.basic_ack(delivery_tag=method.delivery_tag)
     files_processed += 1
 
     # Check if all files have been processed
     if files_processed == len(file_paths):
-        # Output directory
-        output_dir = "/app/output"
-        os.makedirs(output_dir, exist_ok=True)
-                
         # Generate the final histogram
-        bin_edges = np.arange(80, 250 + 5, 5)
-        plt.hist(results, bins=bin_edges, edgecolor='black')
-        plt.xlabel('4-lepton invariant mass [GeV]')
-        plt.ylabel('Events / 5 GeV')
-        plt.title('Final Histogram')
+        xmin = 80  # GeV
+        xmax = 250  # GeV
+        step_size = 5  # GeV
+        bin_edges = np.arange(xmin, xmax + step_size, step_size)
 
+        # Create histogram
+        data_x, bin_edges = np.histogram(results, bins=bin_edges)
+        bin_centres = (bin_edges[:-1] + bin_edges[1:]) / 2  # Calculate bin centers
+        data_x_errors = np.sqrt(data_x)  # Statistical errors
+
+        # Plot
+        plt.figure()
+        plt.errorbar(bin_centres, data_x, yerr=data_x_errors, fmt='ko', label='Statistical Errors')
+        plt.xlabel(r'4-lepton invariant mass $\mathrm{m_{4l}}$ [GeV]', fontsize=13)
+        plt.ylabel(f'Events / {step_size} GeV', fontsize=13)
+        plt.title('Final Histogram')
+        plt.xlim(xmin, xmax)
+        plt.ylim(0, np.amax(data_x) * 1.6)
+        plt.minorticks_on()
+        plt.legend(frameon=False)
 
         # Save the histogram
         output_path = os.path.join(output_dir, "output_plot.png")
@@ -90,6 +100,7 @@ def collect_results(ch, method, properties, body):
 
         plt.show()
         connection.close()
+
 
 channel.basic_consume(queue='result_queue', on_message_callback=collect_results)
 

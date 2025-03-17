@@ -6,8 +6,14 @@ WORKDIR /app
 
 # Install system dependencies (if needed)
 RUN apt-get update && apt-get install -y \
-    librabbitmq-dev \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Copy the requirements file and install dependencies
 COPY requirements.txt /app/
