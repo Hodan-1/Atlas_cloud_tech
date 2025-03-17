@@ -1,27 +1,28 @@
-version: '3'
 services:
-  coordinator:
-    image: hzz-analysis
-    environment:
-      - ROLE=coordinator
-    volumes:
-      - ./shared:/app/shared
-    command: python coordinator.py
+  services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5673:5672"  # RabbitMQ main communication port
+      - "15673:15672" # RabbitMQ management UI
+    restart: always
 
   worker:
-    image: hzz-analysis
+    build: .
+    container_name: worker
+    depends_on:
+      - rabbitmq
     environment:
-      - ROLE=worker
-    volumes:
-      - ./shared:/app/shared
-    command: python worker.py
-    deploy:
-      replicas: 4  # Number of workers (can be increased for scalability)
+      - RABBITMQ_HOST=rabbitmq
+    restart: always # Number of workers (can be increased for scalability)
 
-  aggregator:
-    image: hzz-analysis
-    environment:
-      - ROLE=aggregator
-    volumes:
-      - ./shared:/app/shared
-    command: python aggregator.py
+  coordinator:
+    build: .
+    container_name: messenger
+    depends_on:
+      - rabbitmq
+      - worker
+    command: ["python", "messenger.py"]
+
+

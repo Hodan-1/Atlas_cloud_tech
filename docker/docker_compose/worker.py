@@ -8,20 +8,6 @@ import numpy as np
 MeV = 0.001
 GeV = 1.0
 
-
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-channel = connection.channel()
-channel.queue_declare(queue='tasks')
-channel.queue_declare(queue='results')
-
-
-import pika
-import uproot
-import awkward as ak
-import vector
-import numpy as np
-
 # Constants
 MeV = 0.001
 GeV = 1.0
@@ -67,7 +53,7 @@ def callback(ch, method, properties, body):
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 # Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
 channel = connection.channel()
 
 # Declare queues
