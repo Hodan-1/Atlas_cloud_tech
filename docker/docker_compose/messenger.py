@@ -2,6 +2,8 @@ import pika
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import time
+import logging
 
 ##Added the needed files
 file_paths = [
@@ -12,6 +14,9 @@ file_paths = [
     
 ]
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Connect to RabbitMQ with retry logic
 def connect_to_rabbitmq():
@@ -20,9 +25,13 @@ def connect_to_rabbitmq():
             connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
             return connection
         except pika.exceptions.AMQPConnectionError:
-            print("Waiting for RabbitMQ...")
+            logger.info("Waiting for RabbitMQ")
             time.sleep(5)
 
+# Wait for RabbitMQ to initialize
+time.sleep(10)
+
+#CONNNECT TO RABBITMQ
 connection = connect_to_rabbitmq()
 channel = connection.channel()
 
@@ -32,9 +41,9 @@ channel.queue_declare(queue='result_queue', durable=True)
 
 # Send tasks to the queue
 for file in file_paths:
-    task = {'file_path': file}
     channel.basic_publish(exchange='', routing_key='task_queue', body= file)
-    print(f"Sent task: {task}")
+ 
+logger.info(" [x] Sent tasks to workers")
 
 # Collect results from workers. combined agregator to this...
 results = []
@@ -52,6 +61,6 @@ def collect_results(ch, method, properties, body):
 
 channel.basic_consume(queue='result_queue', on_message_callback=collect_results)
 
-print(' Waiting for results.')
+logger.info(' Waiting for results.')
 channel.start_consuming()
 

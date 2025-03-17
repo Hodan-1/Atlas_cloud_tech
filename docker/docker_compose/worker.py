@@ -3,12 +3,13 @@ import uproot
 import awkward as ak
 import vector
 import numpy as np
+import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Constant
-MeV = 0.001
-GeV = 1.0
-
-# Constants
 MeV = 0.001
 GeV = 1.0
 
@@ -41,15 +42,22 @@ def process_task(file_path):
 
 def callback(ch, method, properties, body):
     file_path = body.decode()
-    #debug ... provides updates to process
-    print(f"Processing {file_path}")
+    logger.info(f"Processing {file_path}")
 
-    #data processed hete
-    processed_data = process_task(file_path)
+    try:
+        #data processed hete
+        processed_data = process_task(file_path)
 
-    # Send result back to rabbit
-    channel.basic_publish(exchange='', routing_key='result_queue', body=str(ak.to_list(processed_data['mass'])))
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+        # Send result back to rabbit
+        channel.basic_publish(exchange='', routing_key='result_queue', body=str(ak.to_list(processed_data['mass'])))
+        
+        # Add acknowlegments
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+    except Exception as e:
+        logger.error(f"Error processing {file_path}: {e}")
+        # reject errors and queue
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
 
 def connect_to_rabbitmq():
 ## failing to connect so added a logic that retries:
@@ -63,6 +71,10 @@ def connect_to_rabbitmq():
             print("Waiting for RabbitMQ...")
             time.sleep(5)
 
+# Wait for RabbitMQ to initialize
+time.sleep(10)
+
+#Connect to RabbitMQ
 connection = connect_to_rabbitmq()
 channel = connection.channel()
 
@@ -70,7 +82,7 @@ channel = connection.channel()
 channel.queue_declare(queue='task_queue', durable=True)
 channel.queue_declare(queue='result_queue', durable=True)
 
-
+# Start initiate? tasks
+logger.info("Starting to consume messages...")
 channel.basic_consume(queue='task_queue', on_message_callback=callback)
-print('Worker waiting for messages...')
 channel.start_consuming()
