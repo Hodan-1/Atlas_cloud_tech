@@ -1,0 +1,14 @@
+FROM python:3.12
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file and install dependencies
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy all necessary files
+COPY worker.py messenger.py /app/
+
+# Run both worker.py and messenger.py when the container starts
+CMD ["sh", "-c", "python /app/worker.py & python /app/messenger.py"]

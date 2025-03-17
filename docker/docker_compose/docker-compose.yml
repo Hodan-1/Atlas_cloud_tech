@@ -1,0 +1,27 @@
+version: '3'
+services:
+  coordinator:
+    image: hzz-analysis
+    environment:
+      - ROLE=coordinator
+    volumes:
+      - ./shared:/app/shared
+    command: python coordinator.py
+
+  worker:
+    image: hzz-analysis
+    environment:
+      - ROLE=worker
+    volumes:
+      - ./shared:/app/shared
+    command: python worker.py
+    deploy:
+      replicas: 4  # Number of workers (can be increased for scalability)
+
+  aggregator:
+    image: hzz-analysis
+    environment:
+      - ROLE=aggregator
+    volumes:
+      - ./shared:/app/shared
+    command: python aggregator.py
