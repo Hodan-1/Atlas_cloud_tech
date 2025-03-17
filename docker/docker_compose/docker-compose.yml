@@ -1,5 +1,4 @@
 services:
-  services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -15,14 +14,15 @@ services:
       - rabbitmq
     environment:
       - RABBITMQ_HOST=rabbitmq
+    command: ["python", "worker.py"]
     restart: always # Number of workers (can be increased for scalability)
 
-  coordinator:
+  messenger:
     build: .
     container_name: messenger
     depends_on:
       - rabbitmq
       - worker
     command: ["python", "messenger.py"]
-
+    restart: always
 
