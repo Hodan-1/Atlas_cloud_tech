@@ -57,13 +57,20 @@ logger.info(" [x] Sent tasks to workers")
 
 # Collect results from workers. combined agregator to this...
 results = []
+files_processed = 0
+
 def collect_results(ch, method, properties, body):
+    global files_processed
     result = (json.loads(body.decode()))
     results.extend(result)
     logger.info(f"Received result: {result}")
+    
+    # Acknowledge the message
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+    files_processed += 1
 
-    if len(results) == len(file_paths):
-
+    # Check if all files have been processed
+    if files_processed == len(file_paths):
         # Output directory
         output_dir = "/app/output"
         os.makedirs(output_dir, exist_ok=True)
