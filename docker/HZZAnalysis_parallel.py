@@ -22,7 +22,7 @@ import vector # for 4-momentum calculations
 import time
 import os
 
-
+worker_id = int(os.get)
 
 # Unit definitions, as stored in the data files
 output_dir = "/app/output"

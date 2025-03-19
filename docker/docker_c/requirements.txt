@@ -7,3 +7,5 @@ matplotlib-inline==0.1.6
 uproot==5.6.0
 awkward==2.7.4
 vector==1.6.1
+python-dotenv==1.0.0
+

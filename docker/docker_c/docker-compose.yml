@@ -8,15 +8,16 @@ services:
     networks:
       - hzz_network
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     restart: always
-
   coordinator:
     build: .
     depends_on:
@@ -67,6 +68,5 @@ services:
     networks:
       - hzz_network
     restart: on-failure
-
 
 

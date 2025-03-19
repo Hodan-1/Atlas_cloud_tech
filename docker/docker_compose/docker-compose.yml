@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   rabbitmq:
@@ -11,21 +12,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
   worker:
-    build: .
+    build:
+      context: .  # Build from the root directory
+      dockerfile: Dockerfile
     container_name: worker
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
       - RABBITMQ_HOST=rabbitmq
-    command: ["python", "worker.py"]
-    restart: always
+    command: ["python", "worker.py"]  # Explicitly specify the command to run
+    restart: unless-stopped
 
   messenger:
-    build: .
+    build:
+      context: .  # Build from the root directory
+      dockerfile: Dockerfile
     container_name: messenger
     depends_on:
       rabbitmq:
@@ -35,7 +40,5 @@ services:
     volumes:
       - ./output:/app/output  # Mount output directory
       - /tmp/.X11-unix:/tmp/.X11-unix  # Mount X11 socket
-    command: ["python", "messenger.py"]
-    restart: always
-
-
+    command: ["python", "messenger.py"]  # Explicitly specify the command to run
+    restart: unless-stopped

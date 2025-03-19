@@ -1,28 +1,24 @@
-#Use officical pyhton image
-FROM python:3.12
+# Use Python 3.12 as the base image
+FROM python:3.12-slim
 
 # Set the working directory
 WORKDIR /app
 
 # Install system dependencies (if needed)
-RUN apt-get update && apt-get install -y \
-    libx11-6 \
-    libxext6 \
-    libxrender1 \
-    libxtst6 \
-    libxi6 \
-    libgtk-3-0 \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-
-# Copy the requirements file and install dependencies
-COPY requirements.txt /app/
+# Copy and install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Debugging: Check if pika is installed
-RUN pip list | grep pika
+# Copy the Python scripts
+COPY worker.py messenger.py ./
 
-# Copy all necessary files
-COPY worker.py messenger.py /app/
+# Set environment variables
+ENV RABBITMQ_HOST=rabbitmq
+ENV PYTHONUNBUFFERED=1
 
-#NO CMD: specified in composer.yml
+# Command to run the application (overridden in docker-compose.yml)
+CMD ["python", "worker.py"]

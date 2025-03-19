@@ -1,24 +1,28 @@
-# Use Python 3.12 as the base image
+# Use a lightweight Python 3.12 image
 FROM python:3.12-slim
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies (if needed)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
+# Copy only requirements first (for better caching)
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the Python scripts
-COPY worker.py messenger.py infofile.py ./
-
-# Set environment variables
-ENV RABBITMQ_HOST=rabbitmq
-ENV PYTHONUNBUFFERED=1
-
-# Command to run the application (overridden in docker-compose.yml)
-CMD ["python", "worker.py"]
+# Copy only the necessary Python scripts
+COPY data_reader.py ./data_reader.py
+COPY worker.py ./worker.py
+COPY aggregator.py ./aggregator.py
+COPY coordinator.py ./coordinator.py
+COPY utils.py ./utils.py
+COPY config.py ./config.py
+COPY data_processor.py ./data_processor.py 
+COPY infofile.py ./infofile.py
+# Set the default command (to be overridden in docker-compose)
+CMD ["python"]

@@ -34,7 +34,12 @@ def process_data(sample):
     
     processed_data = []
     for data in tree.iterate(variables, library="ak", step_size=1000000):
-        # Apply cuts
+        data['leading_lep_pt'] = data['lep_pt'][:,0]  
+        data['sub_leading_lep_pt'] = data['lep_pt'][:,1]
+        data['third_leading_lep_pt'] = data['lep_pt'][:,2]
+        data['last_lep_pt'] = data['lep_pt'][:,3]
+    
+    # Apply cuts
         data = data[~cut_lep_type(data['lep_type'])]
         data = data[~cut_lep_charge(data['lep_charge'])]
         

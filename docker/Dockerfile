@@ -1,22 +1,15 @@
-#Use an official image from language
-from python:3.12.3 
-# set the working directories
+# Use an official Python image
+FROM python:3.12
+
+# Set the working directory
 WORKDIR /app
-# Copy requirements and main script files
-COPY requirements.txt .
-COPY HZZAnalysis.py .
-COPY infofile.py .
-# install dependencies
-run pip install --no-cache-dir -r requirements.txt
 
-# Create an output directory for plots
-RUN mkdir -p /app/output
+# Copy the requirements file and install dependencies
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Run the script
-ENTRYPOINT [ "python" , "HZZAnalysis.py" ]
+RUN pip list | grep pika
+# Copy all necessary files
+COPY work.py mess.py infofile.py /app/
 
-
-
-# Make port 8888 available to the world outside this container (for Jupyter Notebook)
-#EXPOSE 8888
-
+# No CMD here; commands are specified in docker-compose.yml
