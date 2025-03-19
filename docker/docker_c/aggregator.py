@@ -61,7 +61,7 @@ def generate_graph(summaries):
     plt.legend()
     plt.savefig("/app/output/final_graph.png")
     
-    logger.info("📈 Final graph saved to /app/output/final_graph.png")
+    logger.info("Final graph saved to /app/output/final_graph.png")
 
 if __name__ == "__main__":
     aggregate_summaries()

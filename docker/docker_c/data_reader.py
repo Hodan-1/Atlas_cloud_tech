@@ -3,6 +3,7 @@ import logging
 from config import BASE_PATH, RABBITMQ_HOST
 from utils import connect_to_rabbitmq, declare_queue
 import infofile 
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def send_tasks():
                 json_message = json.dumps(message)
                 logger.info(f"Sending message: {json_message}")
                 channel.basic_publish(exchange="", routing_key="data_queue", body=json_message)
-
+    time.sleep(10)
     connection.close()
 
 if __name__ == "__main__":
