@@ -26,27 +26,41 @@ def calculate_significance(signal, backgrounds):
                                   for bg in backgrounds)
     return sig_counts / np.sqrt(bg_counts + 0.3 * bg_counts**2)
         
-def process_transverse():
-    # Load all processed data
-    data = ak.from_parquet("/shared_storage/raw_data_*.parquet")
-    backgrounds = [ak.from_parquet(f) for f in glob.glob("/shared_storage/raw_background_*.parquet")]
-    signal = [ak.from_parquet(f) for f in glob.glob("/shared_storage/raw_signal_*.parquet")]
 
-    # Apply transverse cuts
-    filtered_data = apply_transverse_cuts(data)
-    filtered_bg = [apply_transverse_cuts(bg) for bg in backgrounds]
-    filtered_signal = [apply_transverse_cuts(sig) for sig in signal]
+
+def process_transverse():
+    # Check if data files exist
+    data_files = glob.glob("/shared_storage/raw_data_*.parquet")
+    if not data_files:
+        print("No data files found. Waiting for data processing to complete.")
+        return
     
-      # Save filtered data
-    ak.to_parquet(ak.concatenate(filtered_data), "/shared_storage/filtered_data.parquet")
-    ak.to_parquet(ak.concatenate(filtered_bg), "/shared_storage/filtered_background.parquet")
-    ak.to_parquet(ak.concatenate(filtered_signal), "/shared_storage/filtered_signal.parquet")
+    # Load data
+    data = ak.concatenate([ak.from_parquet(f) for f in data_files])
     
-    # Generate final plot
+    # Check if MC files exist
+    mc_files = glob.glob("/shared_storage/raw_background_*.parquet")
+    if not mc_files:
+        print("No MC background files found. Waiting for MC processing to complete.")
+        return
+    
+    # Load MC backgrounds
+    backgrounds = [ak.from_parquet(f) for f in mc_files]
+    
+    # Check if signal files exist
+    signal_files = glob.glob("/shared_storage/raw_signal_*.parquet")
+    if not signal_files:
+        print("No signal files found. Waiting for signal processing to complete.")
+        return
+    
+    # Load signals
+    signals = [ak.from_parquet(f) for f in signal_files]
+    
+    # Proceed with analysis
     plotter = AtlasPlotter()
-    plotter.plot_data(filtered_data)
-    plotter.plot_mc(filtered_bg)
-    plotter.plot_signal(filtered_signal)
+    plotter.plot_data(data)
+    plotter.plot_mc(backgrounds)
+    plotter.plot_signal(signals)
     plotter.save("/shared_storage/final_plot.pdf")
     
 
