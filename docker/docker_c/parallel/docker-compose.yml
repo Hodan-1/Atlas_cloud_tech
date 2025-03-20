@@ -1,0 +1,83 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672"  # Management UI
+    networks:
+      - analysis-net
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_running
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  coordinator:
+    build: .
+    command: python coordinator.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./shared_storage
+        target: /app/shared_storage
+    networks:
+      - analysis-net
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  data_worker:
+    build: .
+    command: python data_worker.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./shared_storage
+        target: /app/shared_storage
+    networks:
+      - analysis-net
+    deploy:
+      replicas: 2  # Scale to 2 workers
+
+  mc_worker:
+    build: .
+    command: python mc_worker.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./shared_storage
+        target: /app/shared_storage
+    networks:
+      - analysis-net
+    deploy:
+      replicas: 2  # Scale to 2 workers
+
+  transverse_worker:
+    build: .
+    command: python transverse_worker.py
+    depends_on:
+      - data_worker
+      - mc_worker
+    volumes:
+      - type: bind
+        source: ./shared_storage
+        target: /app/shared_storage
+    networks:
+      - analysis-net
+
+volumes:
+  shared_storage:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./shared_storage
+      o: bind
+
+networks:
+  analysis-net:
+    driver: bridge
