@@ -43,17 +43,6 @@ samples = {
     },
 }
 
-# Construct file paths
-task_count = 0
-for sample_type, sample_info in SAMPLES.items():
-    for sample_name in sample_info['list']:
-        if sample_type == 'data':
-            prefix = "Data/"
-            file_path = PATH + prefix + sample_name + ".4lep.root"
-        else:
-            prefix = "MC/mc_" + str(infofile.infos[sample_name]["DSID"]) + "."
-            file_path = f"{base_path}MC/mc_{dsid}.{sample}.4lep.root"
-            file_paths = PATH + prefix + sample_name + ".4lep.root"
 
 
             # Skip if file doesn't exist
@@ -76,6 +65,37 @@ def main():
     channel = connection.channel()
 
     channel.queue_declare(queue=TASK_QUEUE, durable=True)
+
+    # Set message persistence
+    properties = pika.BasicProperties(
+        delivery_mode=2,  
+    )
+
+    # Get parameters from environment variables
+    lumi = float(os.environ.get('LUMI', '10'))
+    fraction = float(os.environ.get('FRACTION', '1.0'))
+    pt_cuts_str = os.environ.get('PT_CUTS', '')
+    pt_cuts = [float(x) for x in pt_cuts_str.split(',')] if pt_cuts_str else None
+    
+    print(f"Starting data loader with lumi={lumi}, fraction={fraction}, pt_cuts={pt_cuts}")
+    
+        # Construct file paths
+    task_count = 0
+    for sample_type, sample_info in SAMPLES.items():
+        for sample_name in sample_info['list']:
+            if sample_type == 'data':
+                prefix = "Data/"
+                file_path = PATH + prefix + sample_name + ".4lep.root"
+            else:
+                prefix = "MC/mc_" + str(infofile.infos[sample_name]["DSID"]) + "."
+                file_path = f"{base_path}MC/mc_{dsid}.{sample}.4lep.root"
+                file_paths = PATH + prefix + sample_name + ".4lep.root"
+            
+            # Skip if file doesn't exist
+            if not check_file_exists(file_path):
+                print(f"File not found: {file_path}")
+                continue
+
     while True:
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
