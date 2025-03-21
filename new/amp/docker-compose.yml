@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: physics_user
+      RABBITMQ_DEFAULT_PASS: physics_pass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  data_loader:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - ROLE=worker
+    volumes:
+      - ./data:/app/data
+      - .:/app  # Mount entire project directory
+
+  data_processor:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+      - data_loader
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - ROLE=worker
+    volumes:
+      - ./processed_data:/app/processed_data
+      - .:/app  # Mount entire project directory
+
+  analysis_worker:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+      - data_processor
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - ROLE=worker
+    volumes:
+      - ./analysis_results:/app/analysis_results
+      - .:/app  # Mount entire project directory
+
+  visualization_service:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+      - analysis_worker
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - ROLE=worker
+    volumes:
+      - ./plots:/app/plots
+      - .:/app  # Mount entire project directory
+
+  publisher:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - ROLE=publisher
+    volumes:
+      - .:/app  # Mount entire project directory
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  default:
+    driver: bridge
