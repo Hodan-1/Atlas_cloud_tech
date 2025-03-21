@@ -1,0 +1,38 @@
+FROM python:3.12 AS base
+
+# Install common dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy common code and test data generator
+COPY common/ /app/common/
+COPY generate_test_data.py /app/generate_test_data.py
+
+# Data Loader stage
+FROM base AS data_loader
+COPY workers/data_loader/ /app/workers/data_loader/
+CMD ["python", "-u", "/app/workers/data_loader/data_loader.py"]
+
+# Data Processor stage
+FROM base AS data_processor
+COPY workers/data_processor/ /app/workers/data_processor/
+CMD ["python", "-u", "/app/workers/data_processor/data_processor.py"]
+
+# Analysis stage
+FROM base AS analysis
+COPY workers/analysis/ /app/workers/analysis/
+CMD ["python", "-u", "/app/workers/analysis/analysis.py"]
+
+# Visualization stage
+FROM base AS visualization
+COPY workers/visualization/ /app/workers/visualization/
+RUN mkdir -p /app/output
+CMD ["python", "-u", "/app/workers/visualization/visualization.py"]
