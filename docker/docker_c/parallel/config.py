@@ -13,7 +13,7 @@ xmax = 250 * GeV
 step_size = 5 * GeV
 bin_edges = np.arange(xmin, xmax + step_size, step_size)
 bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-signal_region = slice(7, 10)  # 120-135 GeV
+signal_region_bins = list(range(7, 10))  # 120-135 GeV
 
 samples = {
 

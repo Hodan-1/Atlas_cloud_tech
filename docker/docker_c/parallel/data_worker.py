@@ -1,12 +1,8 @@
-
 import json
 import uproot
 import awkward as ak
-import numpy as np
-import vector
 import pika
 from calc_utils import cut_lep_type, cut_lep_charge, calc_mass
-import infofile 
 import os
 import logging
 
@@ -16,81 +12,139 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-# Constant
-MeV = 0.001
-GeV = 1.0
 
-output_dir = "/app/shared_storage"
-os.makedirs(output_dir, exist_ok=True)
+# Constants
+MeV = 0.001
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')  # Added environment variable support
+DATA_BASE_PATH = "https://atlas-opendata.web.cern.ch/atlas-opendata/samples/2020/4lep/"
 
 def process_data(sample):
-    path = "https://atlas-opendata.web.cern.ch/atlas-opendata/samples/2020/4lep/"
-    file_path = f"{path}Data/{sample}.4lep.root"
-    
+    """Process data sample with proper error handling and resource management"""
+    file_path = f"{DATA_BASE_PATH}Data/{sample}.4lep.root"
+    processed_chunks = []
     
     try:
-        tree = uproot.open(file_path + ":mini")
+        with uproot.open(file_path + ":mini") as tree:
+            variables = ['lep_pt', 'lep_eta', 'lep_phi', 'lep_E', 'lep_charge', 'lep_type']
+            
+            for chunk in tree.iterate(variables, library="ak", step_size=1000000):
+                try:
+                    chunk = process_chunk(chunk)
+                    processed_chunks.append(chunk)
+                    logger.info(f"Processed chunk for {sample}")
+                except Exception as e:
+                    logger.error(f"Failed chunk processing for {sample}: {str(e)}")
+                    continue
+
+            if not processed_chunks:
+                logger.warning(f"No valid data processed for {sample}")
+                return None
+                
+            return ak.concatenate(processed_chunks)
+
     except Exception as e:
-        logging.error(f"Failed to open file {file_path}: {e}")
-        return
-    variables = ['lep_pt','lep_eta','lep_phi','lep_E','lep_charge','lep_type']
+        logger.error(f"Failed to process {sample}: {str(e)}")
+        return None
+
+def process_chunk(chunk):
+    """Apply physics transformations to a single chunk"""
+    # Add pT variables
+    chunk = chunk.__setitem__('leading_lep_pt', chunk['lep_pt'][:, 0])
+    chunk = chunk.__setitem__('sub_leading_lep_pt', chunk['lep_pt'][:, 1])
+    chunk = chunk.__setitem__('third_leading_lep_pt', chunk['lep_pt'][:, 2])
+    chunk = chunk.__setitem__('last_lep_pt', chunk['lep_pt'][:, 3])
+
+    # Apply cuts
+    chunk = chunk[~cut_lep_type(chunk['lep_type'])]
+    chunk = chunk[~cut_lep_charge(chunk['lep_charge'])]
     
-    processed_data = []
-    for data in tree.iterate(variables, library="ak", step_size=1000000):
-        try:
-            data['leading_lep_pt'] = data['lep_pt'][:,0]  
-            data['sub_leading_lep_pt'] = data['lep_pt'][:,1]
-            data['third_leading_lep_pt'] = data['lep_pt'][:,2]
-            data['last_lep_pt'] = data['lep_pt'][:,3]
-
-        # Apply cuts
-            data = data[~cut_lep_type(data['lep_type'])]
-            data = data[~cut_lep_charge(data['lep_charge'])]
-            
-            # Calculate mass
-            data['mass'] = calc_mass(data['lep_pt'], data['lep_eta'], 
-                                data['lep_phi'], data['lep_E'])
-            
-            processed_data.append(data)
-            logger.info(f"Processed chunk for sample: {sample}")
-        except Exception as e:
-            logging.error(f"Error processing data: {e}")
-            continue
-
-           # Save processed data to a Parquet file
-    if processed_data:
-        output_path = os.path.join(output_dir, f"raw_{sample}.parquet")
-        ak.to_parquet(ak.concatenate(processed_data), output_path)
-        logger.info(f"Saved processed data to {output_path}")
-    else:
-        logger.warning(f"No processed data for sample {sample}")
-
-def process_task(task):
-    """
-    Process a single task from the RabbitMQ queue.
+    # Calculate invariant mass
+    chunk = chunk.__setitem__('mass', calc_mass(
+        chunk['lep_pt'], 
+        chunk['lep_eta'], 
+        chunk['lep_phi'], 
+        chunk['lep_E']
+    ))
     
-    Args:
-        task (dict): The task containing the sample name.
-    """
-    sample = task['sample']
-    logger.info(f"Processing task for sample: {sample}")
-    process_data(sample)  
+    return chunk
+
+def callback(ch, method, properties, body):
+    """Enhanced task processing with proper error handling"""
+    try:
+        task = json.loads(body)
+        sample = task['sample']
+        logger.info(f"Starting processing for {sample}")
+
+        result = process_data(sample)
+        if result is None:
+            raise ValueError(f"No valid data processed for {sample}")
+
+        # Send results
+        send_result(ch, sample, result)
+        logger.info(f"Completed processing for {sample}")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    except Exception as e:
+        logger.error(f"Failed processing {sample}: {str(e)}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+
+def send_result(channel, sample, data):
+    """Safely send results with compression"""
+    try:
+        message = {
+            'type': 'data',
+            'sample': sample,
+            'data': ak.to_list(data['mass']),
+            'pt_variables': {
+                'leading': ak.to_list(data['leading_lep_pt']),
+                'sub_leading': ak.to_list(data['sub_leading_lep_pt']),
+                'third': ak.to_list(data['third_leading_lep_pt']),
+                'last': ak.to_list(data['last_lep_pt'])
+            }
+        }
+        
+        channel.basic_publish(
+            exchange='',
+            routing_key='results_queue',
+            body=json.dumps(message),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Persistent messages
+                headers={'sample_type': 'data'}
+            )
+        )
+    except Exception as e:
+        logger.error(f"Failed to send results for {sample}: {str(e)}")
+        raise
 
 def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-    channel = connection.channel()
-    channel.queue_declare(queue='data_tasks')
-    logger.info("Connected to RabbitMQ and declared queue 'data_tasks'.")
+    """RabbitMQ connection setup with proper cleanup"""
+    connection = None
+    try:
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(RABBITMQ_HOST)
+        channel = connection.channel()
+        
+        # Queue declarations
+        channel.queue_declare(queue='data_tasks', durable=True)
+        channel.queue_declare(queue='results_queue', durable=True)
+        
+        # Fair dispatch
+        channel.basic_qos(prefetch_count=1)
+        
+        channel.basic_consume(
+            queue='data_tasks',
+            on_message_callback=callback,
+            auto_ack=False
+        )
+        
+        logger.info("Data worker started. Waiting for tasks...")
+        channel.start_consuming()
 
-    def callback(ch, method, properties, body):
-        try:
-            task = json.loads(body)
-            process_task(task)
-        except Exception as e:
-            logger.error(f"Error processing task: {e}")
-
-    channel.basic_consume(queue='data_tasks', on_message_callback=callback, auto_ack=True)
-    channel.start_consuming()
+    except Exception as e:
+        logger.error(f"RabbitMQ connection failed: {str(e)}")
+    finally:
+        if connection and connection.is_open:
+            connection.close()
 
 if __name__ == "__main__":
     main()

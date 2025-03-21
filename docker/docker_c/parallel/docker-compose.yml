@@ -1,85 +1,47 @@
+version: '3.8'
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    ports:
-      - "5672:5672"  # AMQP port
-      - "15672:15672"  # Management UI
-    networks:
-      - analysis-net
-    healthcheck:
-      test: rabbitmq-diagnostics -q check_running
-      interval: 5s
-      timeout: 10s
-      retries: 10
-
-  coordinator:
-    build: .
-    command: python coordinator.py
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    volumes:
-      - type: bind
-        source: ./shared_storage
-        target: /app/shared_storage
-    networks:
-      - analysis-net
     environment:
-      - PYTHONUNBUFFERED=1
-
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   data_worker:
     build: .
+    environment:
+      RABBITMQ_HOST: rabbitmq
     command: python data_worker.py
     depends_on:
-      rabbitmq:
-        condition: service_healthy
-    volumes:
-      - type: bind
-        source: ./shared_storage
-        target: /app/shared_storage
-    networks:
-      - analysis-net
-    deploy:
-      replicas: 2  # Scale to 2 workers
+      - rabbitmq
 
   mc_worker:
     build: .
+    environment:
+      RABBITMQ_HOST: rabbitmq
     command: python mc_worker.py
     depends_on:
-      rabbitmq:
-        condition: service_healthy
-    volumes:
-      - type: bind
-        source: ./shared_storage
-        target: /app/shared_storage
-    networks:
-      - analysis-net
-    deploy:
-      replicas: 2  # Scale to 2 workers
-    
+      - rabbitmq
 
-  transverse_worker:
+  aggregator:
     build: .
-    command: python transverse_worker.py
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    command: python analysis_aggregator.py
     depends_on:
-      - data_worker
-      - mc_worker
-    volumes:
-      - type: bind
-        source: ./shared_storage
-        target: /app/shared_storage
+      - rabbitmq
+    ports:
+      - "8888:8888"  # Optional for Jupyter
+
+  task_sender:
+    build: .
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    command: python /app/send_tasks.py --test full
+    depends_on:
+      - rabbitmq
     networks:
-      - analysis-net
-
-volumes:
-  shared_storage:
-    driver: local
-    driver_opts:
-      type: none
-      device: ./shared_storage
-      o: bind
-
-networks:
-  analysis-net:
-    driver: bridge
+      - default

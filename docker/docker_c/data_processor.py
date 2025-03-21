@@ -1,10 +1,11 @@
 #test functionality
 import uproot
 import awkward as ak
-import logging
+import numpy as np
 import vector  
-import infofile
 import json
+import pika
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ fraction = 1.0
 def process_data(file_path, sample):
     """Reads and processes data from the given ROOT file, returning a dictionary of summaries."""
     try:
-        logger.info(f"📂 Opening file: {file_path} (sample: {sample})")
+        logger.info(f"Opening file: {file_path} (sample: {sample})")
 
         with uproot.open(file_path) as root_file:
             if "mini" not in root_file:

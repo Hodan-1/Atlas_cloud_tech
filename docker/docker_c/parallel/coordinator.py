@@ -87,7 +87,9 @@ def start_tasks():
     publish_task(channel, 'transverse_tasks', {'action': 'process'})
 
     # Wait for all queues to empty
-    for queue in queues:
+    for queue in ['data_tasks', 'mc_background_tasks', 'mc_signal_tasks']:
+        count = channel.queue_declare(queue, passive=True).method.message_count
+        logger.info(f"Published {count} tasks to {queue}")
         wait_for_queue_to_empty(channel, queue)
 
     # Close the connection
