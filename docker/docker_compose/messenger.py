@@ -1,18 +1,21 @@
 import pika
 import numpy as np
-import matplotlib.pyplot as plt
 import json
 import time
 import logging
 import os
+import syst
+import infofile
 
-# Assuming infofile.py exists for sample metadata
-try:
-    import infofile
-except ImportError:
-    logging.error("infofile module not found. MC samples may fail.")
-    infofile = None
 
+def check_file_exists(file_path):
+    """Check if a file exists by trying to open it"""
+    try:
+        with uproot.open(file_path) as f:
+            return True
+    except:
+        return False
+    
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -41,20 +44,38 @@ samples = {
 }
 
 # Construct file paths
-file_paths = []
-for category, info in samples.items():
-    for sample in info['list']:
-        if category == 'data':
-            file_path = f"{base_path}Data/{sample}.4lep.root"
+task_count = 0
+for sample_type, sample_info in SAMPLES.items():
+    for sample_name in sample_info['list']:
+        if sample_type == 'data':
+            prefix = "Data/"
+            file_path = PATH + prefix + sample_name + ".4lep.root"
         else:
-            if not infofile or sample not in infofile.infos:
-                logger.warning(f"Skipping {sample}: not in infofile")
-                continue
-            dsid = infofile.infos[sample]["DSID"]
+            prefix = "MC/mc_" + str(infofile.infos[sample_name]["DSID"]) + "."
             file_path = f"{base_path}MC/mc_{dsid}.{sample}.4lep.root"
-        file_paths.append({"file_path": file_path, "sample": sample})
+            file_paths = PATH + prefix + sample_name + ".4lep.root"
 
-def connect_to_rabbitmq():
+
+            # Skip if file doesn't exist
+            if not check_file_exists(file_path):
+                print(f"File not found: {file_path}")
+                continue
+            
+            # Create task
+            task = {
+                'sample_type': sample_type,
+                'sample_name': sample_name,
+                'lumi': lumi,
+                'fraction': fraction,
+                'pt_cuts': pt_cuts
+            }
+            
+
+def main():
+    connection = connect_to_rabbitmq()
+    channel = connection.channel()
+
+    channel.queue_declare(queue=TASK_QUEUE, durable=True)
     while True:
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
@@ -65,10 +86,7 @@ def connect_to_rabbitmq():
 
 if __name__ == "__main__":
     time.sleep(10)
-    connection = connect_to_rabbitmq()
-    channel = connection.channel()
 
-    channel.queue_declare(queue='task_queue', durable=True)
     channel.queue_declare(queue='result_queue', durable=True)
 
     for task in file_paths:
