@@ -1,0 +1,116 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=atlas
+      - RABBITMQ_DEFAULT_PASS=atlas
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '2G'
+
+  data-loader:
+    build:
+      context: ../workers/data_loader  # Corrected path
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=atlas
+      - RABBITMQ_PASS=atlas
+      - LUMI=10
+      - FRACTION=1.0
+      - PT_CUTS=20,15,10
+      - MAX_WORKERS=4
+    command: python /app/data_loader.py  # Corrected command
+    volumes:
+      - ./output:/app/output
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '2G'
+    image: data-loader:latest
+
+  data-processor:
+    build:
+      context: ../workers/data_processor  # Corrected path
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=atlas
+      - RABBITMQ_PASS=atlas
+      - MAX_WORKERS=4
+    command: python /app/data_processor.py  # Corrected command
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: '4'
+          memory: '4G'
+    image: data-processor:latest
+
+  analysis:
+    build:
+      context: ../workers/analysis  # Corrected path
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=atlas
+      - RABBITMQ_PASS=atlas
+      - LUMI=10
+      - FRACTION=1.0
+      - MAX_WORKERS=4
+    command: python /app/analysis.py  # Corrected command
+    volumes:
+      - ./output:/app/output
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: '4G'
+    image: analysis:latest
+
+  visualization:
+    build:
+      context: ../workers/visualization  # Corrected path
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=atlas
+      - RABBITMQ_PASS=atlas
+      - MAX_WORKERS=2
+    command: python /app/visualization.py  # Corrected command
+    volumes:
+      - ./output:/app/output
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '2G'
+    image: visualization:latest
+
+volumes:
+  rabbitmq_data:
