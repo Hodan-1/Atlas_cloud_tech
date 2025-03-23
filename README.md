@@ -1,5 +1,4 @@
 
-```markdown
 # ATLAS Open Data Analysis Pipeline
 
 ## Overview
@@ -20,9 +19,6 @@ A key feature of this project is its ability to monitor and compare CPU usage ac
 - **CPU Usage Monitoring**: Includes a `cpu_monitor.py` script to track and compare CPU usage across services in different deployment environments.
 - **Automated Build and Deployment**: Provides scripts for building Docker images and deploying the application to Docker Compose or Kubernetes.
 
-```
-
----
 
 ## Getting Started
 
@@ -44,9 +40,9 @@ Before running the project, ensure you have the following installed:
    ```
 
 2. **Build Docker Images**:
-   Run the `build-images.sh` script to build the Docker images for all services:
+   Run the `image-build.sh` script to build the Docker images for all services:
    ```bash
-   ./build-images.sh
+   ./image-build.sh
    ```
 
 3. **Set Up Minikube (for Kubernetes Deployment)**:
@@ -76,10 +72,6 @@ Before running the project, ensure you have the following installed:
    Open your browser and navigate to:
    ```
    http://localhost:15672
-   ```
-   Use the following credentials:
-   - Username: `atlas`
-   - Password: `atlas`
 
 3. **Access Visualization Output**:
    Open your browser and navigate to:
@@ -104,8 +96,6 @@ Before running the project, ensure you have the following installed:
    ```
    🌐 RabbitMQ Management UI is available at:
       http://localhost:15672
-      Username: atlas
-      Password: atlas
    ```
 
 3. **Access Visualization Output**:
