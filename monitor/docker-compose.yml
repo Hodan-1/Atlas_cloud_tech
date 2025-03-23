@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    container_name: hzz_monitoring
+    volumes:
+      - ./output:/app_data  # Mount the local "output" folder to "/app_data" in the container
+    environment:
+      - DEPLOYMENT_TYPE=docker-compose

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-loader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-loader
+  template:
+    metadata:
+      labels:
+        app: data-loader
+    spec:
+      containers:
+        - name: data-loader
+          image: data-loader:latest
+          env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: RABBITMQ_USER
+              value: "atlas"
+            - name: RABBITMQ_PASS
+              value: "atlas"
+            - name: LUMI
+              value: "10"
+            - name: FRACTION
+              value: "1.0"
+            - name: MAX_WORKERS
+              value: "4"
+          resources:
+            requests:
+              cpu: "100m"  # Reduced to 0.1 CPU
+              memory: "128Mi"  # Reduced to 128 MB
+            limits:
+              cpu: "250m"  # Reduced to 0.25 CPU
+              memory: "256Mi"  # Reduced to 256 MB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-loader
+spec:
+  selector:
+    app: data-loader
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

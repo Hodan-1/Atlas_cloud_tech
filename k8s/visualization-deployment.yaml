@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visualization
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: visualization
+  template:
+    metadata:
+      labels:
+        app: visualization
+    spec:
+      containers:
+        - name: visualization
+          image: visualization:latest
+          env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: RABBITMQ_USER
+              value: "atlas"
+            - name: RABBITMQ_PASS
+              value: "atlas"
+          resources:
+            requests:
+              cpu: "100m"  # Reduced to 0.1 CPU
+              memory: "128Mi"  # Reduced to 128 MB
+            limits:
+              cpu: "250m"  # Reduced to 0.25 CPU
+              memory: "256Mi"  # Reduced to 256 MB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visualization
+spec:
+  selector:
+    app: visualization
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

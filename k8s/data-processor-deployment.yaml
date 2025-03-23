@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-processor
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: data-processor
+  template:
+    metadata:
+      labels:
+        app: data-processor
+    spec:
+      containers:
+        - name: data-processor
+          image: data-processor:latest
+          env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: RABBITMQ_USER
+              value: "atlas"
+            - name: RABBITMQ_PASS
+              value: "atlas"
+          resources:
+            requests:
+              cpu: "100m"  # Reduced to 0.1 CPU
+              memory: "128Mi"  # Reduced to 128 MB
+            limits:
+              cpu: "250m"  # Reduced to 0.25 CPU
+              memory: "256Mi"  # Reduced to 256 MB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-processor
+spec:
+  selector:
+    app: data-processor
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

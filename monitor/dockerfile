@@ -6,16 +6,12 @@ WORKDIR /app
 # Install dependencies
 RUN pip install psutil matplotlib pandas numpy 
 
-# Copy the common module (if needed by your benchmark)
-COPY common /app/common
-
 # Copy the benchmark scripts
 COPY cpu_monitor.py /app/
 COPY benchmark.py /app/
 
-# Set Python path
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
+# Define environment variable
+ENV DEPLOYMENT_TYPE=kubernetes
 
-# Default command
-CMD ["python", "/app/benchmark.py"]
+# Run benchmark.py when the container launches
+CMD ["python", "benchmark.py"]
