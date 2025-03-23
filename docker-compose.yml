@@ -24,7 +24,7 @@ services:
 
   data-loader:
     build:
-      context: ./workers/data_loader
+      context: ./workers/data_loader/
       dockerfile: Dockerfile
     depends_on:
       rabbitmq:
@@ -48,7 +48,7 @@ services:
 
   data-processor:
     build:
-      context: ./workers/data_processor
+      context: ./workers/data_processor/
       dockerfile: Dockerfile
     depends_on:
       rabbitmq:
@@ -68,7 +68,7 @@ services:
 
   analysis:
     build:
-      context: ./workers/analysis
+      context: ./workers/analysis/
       dockerfile: Dockerfile
     depends_on:
       rabbitmq:
@@ -91,7 +91,7 @@ services:
 
   visualization:
     build:
-      context: ./workers/visualization
+      context: ./workers/visualization/
       dockerfile: Dockerfile
     depends_on:
       rabbitmq:

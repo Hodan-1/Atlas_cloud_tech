@@ -11,6 +11,7 @@ RUN apt-get update && \
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
+COPY infofile .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
@@ -24,4 +25,4 @@ ENV MAX_WORKERS=4
 ENV PYTHONUNBUFFERED=1
 
 # Default command
-CMD ["python", "/app/workers/data_processor/data_processor.py"]
+CMD ["python", "/app/workers/data_processor.py"]
