@@ -35,8 +35,7 @@ Before running the project, ensure you have the following installed:
 ### Installation
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your-repo-name
+   git clone 
    ```
 
 2. **Build Docker Images**:
@@ -111,14 +110,57 @@ Before running the project, ensure you have the following installed:
 ---
 
 ## Monitoring CPU Usage
-The `cpu_monitor.py` script allows you to track the CPU usage of each microservice, enabling performance comparisons between Docker Compose and Kubernetes deployments. To use it:
-1. Ensure the pipeline is running.
-2. Execute the monitoring script:
-   ```bash
-   python common/cpu_monitor.py
-   ```
 
----
+Using CPU monitoring
+
+## Running the Benchmark
+
+### Option 1: Using Docker Compose (Local)
+Build the Docker image:
+
+bash
+Copy
+docker-compose build
+Run the benchmark:
+
+bash
+Copy
+docker-compose up
+Check the results:
+
+The results will be saved in the output folder:
+
+cpu_data_docker-compose.csv
+
+cpu_usage_docker-compose.png
+
+cpu_comparison.png
+
+cpu_comparison_results.txt
+
+Option 2: Using Kubernetes
+Build and push the Docker image:
+
+bash
+Copy
+docker build -t your-docker-image:latest .
+docker tag your-docker-image:latest your-dockerhub-username/your-docker-image:latest
+docker push your-dockerhub-username/your-docker-image:latest
+Deploy the benchmark job to your Kubernetes cluster:
+
+bash
+Copy
+kubectl apply -f benchmark-job.yaml
+Monitor the job:
+
+bash
+Copy
+kubectl get jobs
+kubectl logs <pod-name>
+Access the results:
+
+The results will be saved to the persistent volume defined in benchmark-job.yaml.
+------
 
 ## Troubleshooting
 
