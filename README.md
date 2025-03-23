@@ -60,7 +60,7 @@ Before running the project, ensure you have the following installed:
 
 ## Running the Application
 
-### Using Docker Compose
+### Using Docker Compose (Don't forget to build your image first!!)
 1. **Start the Application**:
    Run the `docker-run.sh` script to start the application using Docker Compose:
    ```bash
@@ -76,6 +76,12 @@ Before running the project, ensure you have the following installed:
    Open your browser and navigate to:
    ```
    http://localhost:8080
+   ```
+4. **If you'd like to see the full setup without using shell scripts, you can manually run the following Docker Compose command:**
+
+   ```bash
+   docker-compose up --build
+
    ```
 
 ### Using Kubernetes
