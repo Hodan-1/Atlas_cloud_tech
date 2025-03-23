@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: benchmark-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: benchmark
+        image: benchmark:latest
+        env:
+        - name: DEPLOYMENT_TYPE
+          value: "kubernetes"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq-service"
+        - name: RABBITMQ_USER
+          value: "atlas"
+        - name: RABBITMQ_PASS
+          value: "atlas"
+        - name: PYTHONPATH
+          value: "/app"
+        volumeMounts:
+        - name: app-data
+          mountPath: /app_data
+      volumes:
+      - name: app-data
+        emptyDir: {}
+      restartPolicy: Never
+  backoffLimit: 1
