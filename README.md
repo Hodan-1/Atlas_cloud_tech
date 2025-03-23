@@ -111,55 +111,57 @@ Before running the project, ensure you have the following installed:
 
 ## Monitoring CPU Usage
 
-Using CPU monitoring
+This project monitors CPU usage during a benchmark and saves the results for analysis.
+
+---
 
 ## Running the Benchmark
 
 ### Option 1: Using Docker Compose (Local)
-Build the Docker image:
 
-bash
-Copy
-docker-compose build
-Run the benchmark:
+1. **Build the Docker image**:
+   ```bash
+   docker-compose build
+   ```
 
-bash
-Copy
-docker-compose up
-Check the results:
+2. **Run the benchmark**:
+   ```bash
+   docker-compose up
+   ```
 
-The results will be saved in the output folder:
+3. **Check the results**:
+   The results will be saved in the `output` folder:
+   - `cpu_data_docker-compose.csv`
+   - `cpu_usage_docker-compose.png`
+   - `cpu_comparison.png`
+   - `cpu_comparison_results.txt`
 
-cpu_data_docker-compose.csv
+---
 
-cpu_usage_docker-compose.png
+### Option 2: Using Kubernetes
 
-cpu_comparison.png
+1. **Build and push the Docker image**:
+   ```bash
+   docker build -t your-docker-image:latest .
+   docker tag your-docker-image:latest your-dockerhub-username/your-docker-image:latest
+   docker push your-dockerhub-username/your-docker-image:latest
+   ```
 
-cpu_comparison_results.txt
+2. **Deploy the benchmark job to your Kubernetes cluster**:
+   ```bash
+   kubectl apply -f benchmark-job.yaml
+   ```
 
-Option 2: Using Kubernetes
-Build and push the Docker image:
+3. **Monitor the job**:
+   ```bash
+   kubectl get jobs
+   kubectl logs <pod-name>
+   ```
 
-bash
-Copy
-docker build -t your-docker-image:latest .
-docker tag your-docker-image:latest your-dockerhub-username/your-docker-image:latest
-docker push your-dockerhub-username/your-docker-image:latest
-Deploy the benchmark job to your Kubernetes cluster:
+4. **Access the results**:
+   The results will be saved to the persistent volume defined in `benchmark-job.yaml`.
 
-bash
-Copy
-kubectl apply -f benchmark-job.yaml
-Monitor the job:
-
-bash
-Copy
-kubectl get jobs
-kubectl logs <pod-name>
-Access the results:
-
-The results will be saved to the persistent volume defined in benchmark-job.yaml.
+---
 ------
 
 ## Troubleshooting
